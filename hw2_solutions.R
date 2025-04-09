@@ -158,7 +158,7 @@ map(stat_functions, function(fun) {
 # Create histograms for each numeric variable using the map pattern
 # Function to create each histogram.
 create_histogram <- function(data, var_name) {
-  # Remove NA observations in var_name.
+  # Remove NA observations in for the column var_name.
   data <- data[!is.na(data[[var_name]]), ]
   ggplot(data, aes(x = get(var_name), fill = species)) +
     geom_histogram(bins = 20) +
