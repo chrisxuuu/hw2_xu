@@ -111,7 +111,6 @@ tapply(
 
 # Purrr Map Functions
 # Rewrite using map_dbl()
-library(dplyr)
 # Mean of bill_length_mm, bill_depth_mm, flipper_length_mm, and body_mass_g.
 map_dbl(as.list(penguins_df), function(x) mean(x, na.rm = TRUE))
 # Mean of body_mass_g by species.
