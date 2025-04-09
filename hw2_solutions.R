@@ -1,41 +1,44 @@
 # Your Name: Chris Xu
 # Course: PHB 228, Assignment 2
 # Date: Apr. 9, 2025
-# Description: This script provides solutions for Homework 2, focusing on R
-# data structures, mapping functions, and version control concepts.
+# Description: This script works with data structures and mapping functions in R.
 
 # Part 1: Version Control Setup
 # See the Github Repo at: https://github.com/chrisxuuu/hw2_xu.
-# Load Libraries.
+# Load required packages
 library(palmerpenguins)
 library(purrr)
 library(dplyr)
 library(ggplot2)
 
 # Part 2: Data Structures
-# List Operations.
-# Get Unique Species.
+
+# 1. List Operations
+# Extract unique species
 unique_species <- unique(penguins$species)
 print(unique_species)
 
-# Separate the species by type.
+# Create list where each element contains data for one species
 species_dfs <- split(penguins, penguins$species, drop = FALSE)
 
-# Sample Size Attribute.
+# Add sample size attribute to each list element
 attributes(species_dfs)$sample_size <- sapply(species_dfs, function(x) nrow(x))
 
-# We can access the sample size attribute by the following:
+# Access the sample size attribute
 attributes(species_dfs)$sample_size
 
-# Matrix of numeric measurements for penguins.
+# 2. Matrix vs. Data Frame
+# Create a matrix with numeric measurements
 penguins_mtx <- as.matrix(penguins[, c(
   "bill_length_mm", "bill_depth_mm",
   "flipper_length_mm", "body_mass_g"
 )])
+# Create a data frame with the same measurements
 penguins_df <- as.data.frame(penguins[, c(
   "bill_length_mm", "bill_depth_mm",
   "flipper_length_mm", "body_mass_g"
 )])
+# Compare results and explain differences:
 str(penguins_mtx)
 # num [1:344, 1:4] 39.1 39.5 40.3 NA 36.7 39.3 38.9 39.2 34.1 42 ...
 # - attr(*, "dimnames")=List of 2
@@ -59,21 +62,27 @@ str(penguins_df)
 # This is different from the matrix, where everything is stored as numerics. The
 # as.matrix() function coerced everything into numerics.
 
+# When would you prefer each data structure?
+
 # If I were to fit a statistical model onto the dataset, I would prefer to use the
 # data.frame structure. If I use this dataset to demostrate a mathematical algorithm
 # that requires operations such as matrix multiplication, inversion, etc, I would
 # use the matrix structure. One operation would be some analysis of population structure
 # of the measurements.
 
-# Copy-on-Modify
+# 3. Copy-on-Modify
+# Create a vector x
 x <- 1:5
+# Create a reference y pointing to the same vector
 y <- x
+# Modify y and observe what happens to x
 y[3] <- 10
 print(x)
 # [1] 1 2 3 4 5
 print(y)
 # [1]  1  2 10  4  5
 
+# Explanation of R's copy-on-modify behavior vs other languages:
 # In R, if we modify y, x remains the same while y changes. If we were to do
 # this in Python:
 # x = [1, 2, 3, 4, 5]
@@ -88,12 +97,11 @@ print(y)
 # memory, while R copies the variable data and stores them seperately.
 
 # Part 3: Map Functions
-# Base R Functions.
-# Mean of bill_length_mm, bill_depth_mm, flipper_length_mm, and body_mass_g.
+# Use lapply() to calculate the mean of each numeric variable
 lapply(as.list(penguins_df), function(x) mean(x, na.rm = TRUE))
-# Mean of body_mass_g by species.
+# Use tapply() to find mean body mass by species
 tapply(penguins, penguins$species, function(x) mean(x$body_mass_g, na.rm = TRUE))
-# Mean of body_mass_g by species and sex.
+# Use tapply() to find mean body mass by species and sex
 # Filter for penguins without NA for sex.
 penguins_complete_sex <- penguins[!is.na(penguins$sex), ]
 # Create indicator for species with sex.
@@ -105,13 +113,13 @@ tapply(
   penguins_complete_sex, penguins_complete_sex$species_sex,
   function(x) mean(x$body_mass_g, na.rm = TRUE)
 )
+# Comparison of output types:
 # lapply() outputs a names list with the mean of each column in the data.frame.
 # tapply() outputs an numeric array with names stored in the attribute of
 # the corresponding type of mean (by species and by species and sex).
 
-# Purrr Map Functions
-# Rewrite using map_dbl()
-# Mean of bill_length_mm, bill_depth_mm, flipper_length_mm, and body_mass_g.
+# 5. Purrr Map Functions
+# Rewrite first task using map_dbl()
 map_dbl(as.list(penguins_df), function(x) mean(x, na.rm = TRUE))
 # Mean of body_mass_g by species.
 penguins %>%
@@ -124,18 +132,30 @@ penguins %>%
   split(.$species_sex) %>%
   map_dbl(~ mean(.$body_mass_g, na.rm = TRUE))
 
-# Ratio of bill_length_mm to bill_depth_mm.
+# Use map2() to calculate bill length to bill depth ratio for each species
 lapply(species_dfs, function(species_data) {
   map2(
     species_data$bill_length_mm, species_data$bill_depth_mm,
     function(x, y) x / y
   )
 })
+# Create list with different statistics for each measurement variable
+stat_functions <- list(
+  mean = function(x) mean(x, na.rm = TRUE),
+  median = function(x) median(x, na.rm = TRUE),
+  sd = function(x) sd(x, na.rm = TRUE)
+)
+map(stat_functions, function(fun) {
+  map_dbl(penguins_df, fun)
+})
+
+# Which approach do you prefer and why?
 # I prefer using the Purrr map functions, especially combined with the dplyr
 # pipe. It allows for more readable code. Also, it follows a more natural order of logic
 # to me and reduces some verbosity in code.
 
-# Practical Application
+# 6. Practical Application
+# Create histograms for each numeric variable using the map pattern
 # Function to create each histogram.
 create_histogram <- function(data, var_name) {
   # Remove NA observations in var_name.
@@ -158,6 +178,7 @@ hist_plts <- map(colnames(penguins_df), ~ create_histogram(
 # Output all 4 combined plots in a 2x2 grid (will be 12 in total)
 do.call(gridExtra::grid.arrange, c(hist_plts, ncol = 2))
 
+# Explanation of the efficiency of this approach:
 # The above implementation is more efficient than writing separate ggplot functions
 # for each plot because it is much more condense and easier to debug. Since the
 # only thing that is changing is the column variable name, there will be less
@@ -166,45 +187,67 @@ do.call(gridExtra::grid.arrange, c(hist_plts, ncol = 2))
 # same fix manually 4 times.
 
 # Part 4: Memory Management
-# Original code
-original_func <- function() {
-  result <- numeric(0)
+
+# 7. Efficient Code
+# Original inefficient code
+system.time({
+  result_inefficient <- numeric(0)
   for (i in 1:10000) {
-    result <- c(result, i^2)
+    result_inefficient <- c(result_inefficient, i^2)
   }
-  return(result)
-}
-system.time(original_func())
+})
 #   user  system elapsed
-#  0.090   0.036   0.128
-new_func <- function() {
-  result <- 1:10000
-  result <- result^2
-  return(result)
-}
-system.time(new_func())
+#  0.092   0.031   0.124
+
+# Your efficient version with pre-allocation
+system.time({
+  result <- numeric(10000)
+  for (i in 1:10000) {
+    result[i] <- i^2
+  }
+})
 #   user  system elapsed
-#      0       0       0
+#  0.001   0.000   0.001
+identical(result_inefficient, result)
+# [1] TRUE
 
-# The new function is faster because I used vectorization to square 1:10000 numbers.
-# So, it only writes the final result once to the memory, rather than writing to
-# the memory after each calculation 10000 times. The line `result <- c(result, i^2)`
-# has to write to memory for every number in 1:10000.
+# Explanation of efficiency improvements:
+# In the efficient version, I pre-allocated the memory to store 10000 numerics in
+# the result array rather than repeatedly expanding the vector with
+# `result_inefficient <- c(result_inefficient, i^2)`. If I do not pre-allocate,
+# R needs to find new blocks of memory to first: copy all the existing data in
+# result to the new memory with an additional space, free up the memory in the
+# original space, compute value, and then at the end update pointers to the
+# new memory space. There are significantly more memory operations than if I
+# preallocate and work within the same memory space.
 
-# Data Structure Selection
-# a. I would use a data.frame to store this data because this may involve different
-#    types of data, such as character for patient ID's and numeric for blood pressure
-#    regions.
-# b. I would use a matrix to store this data. All entries would be numeric, and
-#    doing linear algebra, such as finding the inverse of the correlation matrix,
-#    will be easier.
-# c. I would use a named list to store all the fitted models because statistical
-#    models are complex lists with attributes that will only fit in a list of lists
-#    while having easy access through double brackets.
-# d. I would use a data.frame with columns latitude and longitude to store this
-#    data. Each row would represent a coordinate. I use this structure because
-#    it would clearly state which numbers correspond to latitude and which to
-#    longitude. Furthermore, the restriction of data.frame (each column have the
-#    same length) will work in favor as it ensures each coordinate will have both
-#    latitude and longitude. Finally, it can be easy to plot using various plotting
-#    packages such as ggplot.
+# 8. Data Structure Selection
+# a. Storing patient IDs and blood pressure readings
+# Most appropriate data structure: data.frame
+# Explanation:
+# Data may involve different
+# types of data, such as character for patient ID's and numeric for blood pressure
+# regions.
+
+# b. Representing a correlation matrix between 5 variables
+# Most appropriate data structure: matrix
+# Explanation:
+# All entries would be numeric, and
+# doing linear algebra, such as finding the inverse of the correlation matrix,
+# will be easier.
+
+# c. Organizing multiple statistical models for different subsets
+# Most appropriate data structure: list
+# Explanation:
+# Statistical models are complex lists with attributes that will only fit in a list of lists
+# while having easy access through double brackets.
+
+# d. Storing latitude and longitude coordinates for map plotting
+# Most appropriate data structure: data.frame
+# Explanation:
+# Each row would represent a coordinate. I use this structure because
+# it would clearly state which numbers correspond to latitude and which to
+# longitude. Furthermore, the restriction of data.frame (each column have the
+# same length) will work in favor as it ensures each coordinate will have both
+# latitude and longitude. Finally, it can be easy to plot using various plotting
+# packages such as ggplot.
